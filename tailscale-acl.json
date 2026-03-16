@@ -1,0 +1,167 @@
+// ═══════════════════════════════════════════════════════════════════════
+// Tailscale ACL — NEURAL-CLAW Brain Network Policy
+// Anatomically-correct routing: agents can only talk to their neighbors
+// Apply via: Tailscale admin console → Access Controls
+// ═══════════════════════════════════════════════════════════════════════
+//
+// ARCHITECTURE:
+//   - Each brain region runs on a tagged Tailscale node
+//   - ACL enforces anatomical routing (e.g. hippocampus → thalamus only)
+//   - No agent can reach another without going through its relay
+//   - The kill switch (corax:oversight) can reach ALL nodes
+//
+// NODE TAGS (assign to your machines):
+//   tag:neural-cortex       — PFC, Motor, Sensory, Broca, Wernicke agents
+//   tag:neural-limbic       — Hippocampus, Amygdala, Cingulate agents
+//   tag:neural-thalamus     — Thalamic relay (the central router)
+//   tag:neural-basal        — Striatum, VTA agents
+//   tag:neural-cerebellum   — Cerebellum, timing agents
+//   tag:neural-brainstem    — Reticular formation, Locus Coeruleus (triggers)
+//   tag:neural-output       — Output/action agents
+//   tag:neural-canvas       — The NEURAL-CLAW UI canvas
+//   tag:corax-oversight     — Kill switch + governance node (ops machine)
+//   tag:ollama-inference    — Ollama inference server
+// ═══════════════════════════════════════════════════════════════════════
+
+{
+  "tagOwners": {
+    "tag:neural-cortex":       ["autogroup:admin"],
+    "tag:neural-limbic":       ["autogroup:admin"],
+    "tag:neural-thalamus":     ["autogroup:admin"],
+    "tag:neural-basal":        ["autogroup:admin"],
+    "tag:neural-cerebellum":   ["autogroup:admin"],
+    "tag:neural-brainstem":    ["autogroup:admin"],
+    "tag:neural-output":       ["autogroup:admin"],
+    "tag:neural-canvas":       ["autogroup:admin"],
+    "tag:corax-oversight":     ["autogroup:admin"],
+    "tag:ollama-inference":    ["autogroup:admin"]
+  },
+
+  "acls": [
+    // ── Admin has full access ──────────────────────────────────────
+    {
+      "action": "accept",
+      "src": ["autogroup:admin"],
+      "dst": ["*:*"]
+    },
+
+    // ── CoRax Oversight: kill switch can reach everything ─────────
+    {
+      "action": "accept",
+      "src": ["tag:corax-oversight"],
+      "dst": ["*:18789", "*:3000", "*:11434"]
+    },
+
+    // ── Canvas UI: reaches Ollama and OpenClaw only ───────────────
+    {
+      "action": "accept",
+      "src": ["tag:neural-canvas"],
+      "dst": [
+        "tag:ollama-inference:11434",   // Ollama inference
+        "tag:neural-thalamus:18789"     // All requests go through thalamic relay
+      ]
+    },
+
+    // ── Brainstem (triggers): fires to Thalamus only ──────────────
+    // Anatomically correct: sensory input → thalamic relay → cortex
+    {
+      "action": "accept",
+      "src": ["tag:neural-brainstem"],
+      "dst": ["tag:neural-thalamus:18789"]
+    },
+
+    // ── Thalamus: central router — can reach all cortex & limbic ──
+    {
+      "action": "accept",
+      "src": ["tag:neural-thalamus"],
+      "dst": [
+        "tag:neural-cortex:18789",
+        "tag:neural-limbic:18789",
+        "tag:neural-basal:18789",
+        "tag:ollama-inference:11434"
+      ]
+    },
+
+    // ── Cortex: can call limbic, basal ganglia, and thalamus ──────
+    {
+      "action": "accept",
+      "src": ["tag:neural-cortex"],
+      "dst": [
+        "tag:neural-limbic:18789",
+        "tag:neural-basal:18789",
+        "tag:neural-thalamus:18789",     // Feedback loop
+        "tag:neural-output:18789",
+        "tag:ollama-inference:11434"
+      ]
+    },
+
+    // ── Limbic: hippocampus/amygdala → thalamus + cortex ─────────
+    {
+      "action": "accept",
+      "src": ["tag:neural-limbic"],
+      "dst": [
+        "tag:neural-thalamus:18789",
+        "tag:neural-cortex:18789",
+        "tag:corax-oversight:18789",    // Amygdala can fire governance alerts
+        "tag:ollama-inference:11434"
+      ]
+    },
+
+    // ── Basal Ganglia: action selection → motor cortex + output ──
+    {
+      "action": "accept",
+      "src": ["tag:neural-basal"],
+      "dst": [
+        "tag:neural-cortex:18789",
+        "tag:neural-output:18789",
+        "tag:ollama-inference:11434"
+      ]
+    },
+
+    // ── Cerebellum: timing/loop → cortex + basal ganglia ─────────
+    {
+      "action": "accept",
+      "src": ["tag:neural-cerebellum"],
+      "dst": [
+        "tag:neural-cortex:18789",
+        "tag:neural-basal:18789",
+        "tag:ollama-inference:11434"
+      ]
+    },
+
+    // ── All nodes can reach Ollama for inference ───────────────────
+    {
+      "action": "accept",
+      "src": [
+        "tag:neural-cortex",
+        "tag:neural-limbic",
+        "tag:neural-thalamus",
+        "tag:neural-basal",
+        "tag:neural-cerebellum",
+        "tag:neural-brainstem"
+      ],
+      "dst": ["tag:ollama-inference:11434"]
+    }
+
+    // ── DEFAULT DENY: everything not listed above is blocked ───────
+    // Tailscale default-deny means no other connections allowed
+  ],
+
+  // ── SSH access for ops ────────────────────────────────────────────
+  "ssh": [
+    {
+      "action": "accept",
+      "src": ["autogroup:admin"],
+      "dst": ["autogroup:self"],
+      "users": ["autogroup:nonroot"]
+    }
+  ],
+
+  // ── Posture checks ────────────────────────────────────────────────
+  "nodeAttrs": [
+    {
+      "target": ["tag:neural-cortex", "tag:neural-limbic", "tag:neural-thalamus"],
+      "attr": ["mullvad"]   // Require Tailscale posture check
+    }
+  ]
+}

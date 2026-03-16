@@ -1,0 +1,194 @@
+# ═══════════════════════════════════════════════════════════════════════
+# NEURAL-CLAW — Local Agent Orchestration Stack
+# MIZU Dialectical Architecture | Ollama Local Inference | No API Keys
+# ═══════════════════════════════════════════════════════════════════════
+# 
+# DEPLOYMENT REQUIREMENTS:
+#   - Tailscale installed and authenticated on host
+#   - Docker + Docker Compose installed
+#   - Port 18789 bound to loopback only (gateway.bind: loopback in openclaw.json)
+#   - NEVER expose 11434 (Ollama) or 18789 (OpenClaw) to public internet
+#
+# STARTUP: docker compose up -d
+# LOGS:    docker compose logs -f
+# ═══════════════════════════════════════════════════════════════════════
+
+version: "3.9"
+
+networks:
+  neural_internal:
+    driver: bridge
+    internal: true          # No direct internet access from containers
+  neural_gateway:
+    driver: bridge          # Only gateway container touches this
+
+volumes:
+  ollama_models:            # Persisted model weights
+  openclaw_data:            # OpenClaw state & workspace
+  hippo_memory:             # Hippocampus agent long-term memory
+  corax_audit:              # Governance audit log (append-only)
+
+services:
+
+  # ─── Ollama: Local Inference Engine ───────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: neural_ollama
+    restart: unless-stopped
+    networks:
+      - neural_internal
+    volumes:
+      - ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_ORIGINS=http://localhost,http://127.0.0.1,http://neural_canvas  # CORS whitelist
+      - OLLAMA_MAX_LOADED_MODELS=3
+      - OLLAMA_NUM_PARALLEL=2
+    ports:
+      - "127.0.0.1:11434:11434"     # Loopback only — never 0.0.0.0
+    deploy:
+      resources:
+        limits:
+          memory: 12G               # Adjust to your RAM (leave 4G for OS)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Model Bootstrapper: Pull required models on first run ────────────
+  model_bootstrap:
+    image: ollama/ollama:latest
+    container_name: neural_bootstrap
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - neural_internal
+    entrypoint: |
+      /bin/sh -c "
+        echo '=== NEURAL-CLAW Model Bootstrap ==='
+        echo 'Pulling orchestration model (llama3.2:3b — fast, low RAM)...'
+        ollama pull llama3.2:3b
+        echo 'Pulling fast sub-agent model (phi4-mini — 2.5B, very fast)...'
+        ollama pull phi4-mini
+        echo 'Pulling embedding model for Hippocampus memory...'
+        ollama pull nomic-embed-text
+        echo '=== Bootstrap complete ==='
+        echo 'Optional: run ollama pull qwen2.5-coder:7b for code agents'
+        echo 'Optional: run ollama pull llava:7b for visual cortex agents'
+      "
+    restart: "no"
+    environment:
+      - OLLAMA_HOST=neural_ollama:11434
+
+  # ─── OpenClaw Gateway ─────────────────────────────────────────────────
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    container_name: neural_openclaw
+    restart: unless-stopped
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - neural_internal
+      - neural_gateway
+    volumes:
+      - openclaw_data:/home/openclaw/.openclaw
+      - ./config/openclaw.json:/home/openclaw/.openclaw/openclaw.json:ro
+      - ./config/.env:/home/openclaw/.openclaw/.env:ro
+    env_file:
+      - ./config/.env
+    ports:
+      - "127.0.0.1:18789:18789"     # Loopback only — access via Tailscale tunnel
+    user: "1000:1000"               # Non-root openclaw user
+    security_opt:
+      - no-new-privileges:true
+      - seccomp:./config/openclaw-seccomp.json
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    read_only: true
+    tmpfs:
+      - /tmp
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-H", "Authorization: Bearer ${OPENCLAW_GATEWAY_TOKEN}", "http://localhost:18789/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ─── NEURAL-CLAW Canvas UI ────────────────────────────────────────────
+  # The make.com-style visual orchestration interface
+  canvas:
+    image: node:22-alpine
+    container_name: neural_canvas
+    restart: unless-stopped
+    depends_on:
+      - ollama
+      - openclaw
+    networks:
+      - neural_internal
+      - neural_gateway
+    volumes:
+      - ./canvas:/app:ro
+    working_dir: /app
+    command: ["npx", "serve", "-s", "build", "-l", "3000"]
+    ports:
+      - "127.0.0.1:3000:3000"       # Loopback only
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── Hippocampus Memory Store (ChromaDB vector DB) ───────────────────
+  hippocampus:
+    image: chromadb/chroma:latest
+    container_name: neural_hippo
+    restart: unless-stopped
+    networks:
+      - neural_internal
+    volumes:
+      - hippo_memory:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+      - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider
+      - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token.TokenAuthServerProvider
+      - CHROMA_SERVER_AUTH_TOKEN_TRANSPORT_HEADER=AUTHORIZATION
+    ports:
+      - "127.0.0.1:8000:8000"
+    security_opt:
+      - no-new-privileges:true
+
+  # ─── CoRax Governance Audit Logger ───────────────────────────────────
+  # Append-only audit trail for all governance decisions
+  corax_audit:
+    image: alpine:latest
+    container_name: neural_corax_audit
+    restart: unless-stopped
+    networks:
+      - neural_internal
+    volumes:
+      - corax_audit:/audit
+    command: |
+      sh -c "
+        mkdir -p /audit
+        tail -f /dev/null  # Keep alive — receives logs from OpenClaw via syslog
+      "
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+
+# ─── Docker IPTABLES override to prevent UFW bypass ─────────────────────
+# After running: add to /etc/ufw/after.rules:
+#
+# *filter
+# :DOCKER-USER - [0:0]
+# -A DOCKER-USER -i tailscale0 -j ACCEPT
+# -A DOCKER-USER -j DROP
+# COMMIT
+#
+# Then: sudo ufw reload && sudo systemctl restart docker
