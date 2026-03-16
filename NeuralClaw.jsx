@@ -437,7 +437,7 @@ function Conn({ c, nodes, onDel }) {
     <g>
       <path d={d} fill="none" stroke={ct.color} strokeWidth={ct.width} strokeDasharray={ct.dash} opacity={0.65} style={{ filter:`drop-shadow(0 0 3px ${ct.color}88)` }} />
       <circle cx={(x1+x2)/2} cy={(y1+y2)/2} r={3.5} fill={ct.color} opacity={0.9} />
-      <path d={d} fill="none" stroke="transparent" strokeWidth={14} style={{ cursor:"pointer" }} onClick={()=>onDel(c.id)} />
+      <path d={d} fill="none" stroke="transparent" strokeWidth={14} style={{ cursor:"pointer", pointerEvents:"all" }} onClick={()=>onDel(c.id)} />
     </g>
   );
 }
@@ -476,7 +476,7 @@ export default function NeuralClaw() {
   }, []);
 
   // Auto-scroll log
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = 9999; }, [state.log]);
+  useEffect(() => { if (tab === "log" && logRef.current) logRef.current.scrollTop = 9999; }, [state.log, tab]);
 
   const log = (node, msg, kind="info") => dispatch({ type:"LOG", entry:{ node: node||"SYS", msg, kind } });
 
@@ -638,7 +638,7 @@ export default function NeuralClaw() {
 
   // ── Render ─────────────────────────────────────────────────────────
   return (
-    <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:M.deep,color:M.text,fontFamily:"'Courier New',monospace",overflow:"hidden" }}>
+    <div style={{ display:"flex",flexDirection:"column",height:"100vh",background:M.deep,color:M.text,fontFamily:"'Courier New',monospace",overflow:"hidden" }} onMouseUp={mouseUp}>
 
       {/* TOP BAR */}
       <div style={{ display:"flex",alignItems:"center",padding:"0 14px",height:46,background:M.ink,borderBottom:`1px solid ${M.border}`,gap:10,flexShrink:0 }}>
@@ -776,7 +776,7 @@ export default function NeuralClaw() {
             ))}
           </div>
 
-          <div style={{ flex:1,overflow:"auto" }}>
+          <div ref={logRef} style={{ flex:1,overflow:"auto" }}>
 
             {/* ── INSPECTOR ── */}
             {tab==="inspector" && (
@@ -872,7 +872,7 @@ export default function NeuralClaw() {
 
             {/* ── LOG ── */}
             {tab==="log" && (
-              <div ref={logRef} style={{ padding:8,flex:1 }}>
+              <div style={{ padding:8,flex:1 }}>
                 {state.log.length===0
                   ? <div style={{ color:M.textDim,padding:16,textAlign:"center",fontSize:9 }}>No activity yet. Build a workflow and press RUN.</div>
                   : state.log.map((e,i) => <LogLine key={i} entry={e} />)
