@@ -1,7 +1,7 @@
 # NEURAL-CLAW Development Map
 
 Brain-Modeled Multi-Agent Orchestration Canvas
-MIZU Dialectical Architecture | OpenClaw Native | Ollama Local Inference
+MIZU Dialectical Architecture | TRIT-TRT Ternary Inference | OpenClaw Native
 
 ---
 
@@ -24,7 +24,8 @@ NeuralClaw/
 │       │   ├── connections.js           # Synapse types (excitatory/inhibitory/modulatory)
 │       │   └── corax.js                 # CoRax 12 constitutional governance dimensions
 │       ├── api/
-│       │   └── ollama.js                # Ollama streaming inference + health check
+│       │   ├── trit-trt.js              # TRIT-TRT WebSocket client (primary)
+│       │   └── ollama.js                # Ollama REST client (fallback)
 │       ├── state/
 │       │   └── reducer.js               # Canvas state machine (nodes, connections, log)
 │       ├── engine/
@@ -52,9 +53,22 @@ NeuralClaw/
 │               ├── LogTab.jsx           # Scrollable activity log
 │               └── ConfigTab.jsx        # Ollama endpoint, model selection
 │
+├── trit-trt/                            # TRIT-TRT submodule (ternary inference engine)
+│   ├── trit_trt/                        # Python inference library
+│   │   ├── engine.py                    # Main TritTRT orchestrator
+│   │   ├── bitnet_engine.py             # BitNet b1.58 ternary substrate
+│   │   ├── layer_shard.py               # AirLLM layer-wise sovereign inference
+│   │   ├── trt_engine.py                # TRT Generate→Select→Reflect loop
+│   │   ├── knowledge_store.py           # Persistent insight accumulator
+│   │   └── config.py                    # Configuration dataclasses
+│   ├── ui/                              # FastAPI WebSocket server + web UI
+│   ├── configs/default.yaml             # Default TRT configuration
+│   └── scripts/setup_model.sh           # Model download + build script
+│
 ├── config/                              # Runtime configuration
 │   ├── openclaw.json                    # OpenClaw gateway config
 │   ├── openclaw-seccomp.json            # Seccomp syscall whitelist
+│   ├── Dockerfile.trit-trt              # TRIT-TRT container build
 │   └── .env.example                     # Environment variable template
 │
 ├── docs/
@@ -120,12 +134,27 @@ Restricted nodes are skipped during workflow execution.
 |-------|-----------|---------|
 | UI Framework | React 19 | Canvas orchestration interface |
 | Build Tool | Vite 6 | Dev server + production builds |
-| Inference | Ollama (local) | LLM inference, no API keys needed |
+| **Inference (Primary)** | **TRIT-TRT** | **BitNet b1.58 ternary + TRT dialectical reasoning** |
+| Inference (Fallback) | Ollama | Standard local LLM inference |
 | Agent Runtime | OpenClaw | ReAct loop, skills, WebSocket API |
 | Vector Memory | ChromaDB | Hippocampus episodic memory store |
 | Networking | Tailscale | Encrypted mesh VPN between nodes |
 | Containers | Docker Compose | Full stack orchestration |
 | Security | seccomp + UFW | Syscall filtering + firewall |
+
+### TRIT-TRT: Why Ternary Inference
+
+TRIT-TRT is the native inference engine for NEURAL-CLAW. The alignment is philosophical and technical:
+
+| MIZU Layer | TRIT-TRT Layer | Ternary Mapping |
+|------------|---------------|-----------------|
+| **Thesis (+1)** | TRT Generate phase | Produce N candidate solutions |
+| **Antithesis (-1)** | TRT Select phase | Reject weak candidates via voting |
+| **Synthesis (0)** | TRT Reflect phase | Extract generalizable insights |
+| **Trit weights** | BitNet b1.58 | Model weights ARE trits: {-1, 0, +1} |
+| **Sovereignty** | AirLLM sharding | Run 70B models on 4GB VRAM, no cloud |
+
+Every agent in the brain uses a model whose weights are literally ternary values — the same thesis/antithesis/synthesis that governs the MIZU architecture. The inference process itself is dialectical: generate, challenge, synthesize.
 
 ---
 
@@ -256,23 +285,25 @@ Implement VTA reward-based learning across workflow executions.
 
 ## Agent Registry
 
-| ID | Brain Region | Tier | Type | Model | Purpose |
-|----|-------------|------|------|-------|---------|
-| RAS | Reticular Formation | Brainstem | TRIGGER | none | Event entry point |
-| LC | Locus Coeruleus | Brainstem | MONITOR | phi4-mini | Alert escalation |
-| THL | Thalamic Relay | Thalamus | ROUTER | phi4-mini | Central message routing |
-| PFC | Prefrontal Cortex | Cortex | ORCHESTRATOR | llama3.2 | Executive planning |
-| MOTOR | Motor Cortex | Cortex | EXECUTOR | llama3.2 | Action execution |
-| SENSORY | Sensory Cortex | Cortex | TRANSFORMER | phi4-mini | Input normalization |
-| BROCA | Broca's Area | Cortex | TRANSFORMER | llama3.2 | Language production |
-| WERNICKE | Wernicke's Area | Cortex | TRANSFORMER | llama3.2 | Language comprehension |
-| HIPPO | Hippocampus | Limbic | MEMORY | phi4-mini | Episodic memory |
-| AMYGDALA | Amygdala | Limbic | GOVERNANCE | phi4-mini | Threat detection |
-| ACC | Anterior Cingulate | Limbic | GOVERNANCE | phi4-mini | Conflict resolution |
-| STRIATUM | Striatum | Basal | DECISION | llama3.2 | Action selection |
-| VTA | VTA Dopamine | Basal | MODULATOR | phi4-mini | Reward learning |
-| CBL | Cerebellum | Cerebellum | LOOP | phi4-mini | Timing & error correction |
-| OUT | Output Action | Output | OUTPUT | none | Final delivery |
+| ID | Brain Region | Tier | Type | Backend | Model | Purpose |
+|----|-------------|------|------|---------|-------|---------|
+| RAS | Reticular Formation | Brainstem | TRIGGER | — | none | Event entry point |
+| LC | Locus Coeruleus | Brainstem | MONITOR | TRIT-TRT | BitNet-2B-4T | Alert escalation |
+| THL | Thalamic Relay | Thalamus | ROUTER | TRIT-TRT | BitNet-2B-4T | Central message routing |
+| PFC | Prefrontal Cortex | Cortex | ORCHESTRATOR | TRIT-TRT | BitNet-2B-4T | Executive planning |
+| MOTOR | Motor Cortex | Cortex | EXECUTOR | TRIT-TRT | BitNet-2B-4T | Action execution |
+| SENSORY | Sensory Cortex | Cortex | TRANSFORMER | TRIT-TRT | BitNet-2B-4T | Input normalization |
+| BROCA | Broca's Area | Cortex | TRANSFORMER | TRIT-TRT | BitNet-2B-4T | Language production |
+| WERNICKE | Wernicke's Area | Cortex | TRANSFORMER | TRIT-TRT | BitNet-2B-4T | Language comprehension |
+| HIPPO | Hippocampus | Limbic | MEMORY | TRIT-TRT | BitNet-2B-4T | Episodic memory |
+| AMYGDALA | Amygdala | Limbic | GOVERNANCE | TRIT-TRT | BitNet-2B-4T | Threat detection |
+| ACC | Anterior Cingulate | Limbic | GOVERNANCE | TRIT-TRT | BitNet-2B-4T | Conflict resolution |
+| STRIATUM | Striatum | Basal | DECISION | TRIT-TRT | BitNet-2B-4T | Action selection |
+| VTA | VTA Dopamine | Basal | MODULATOR | TRIT-TRT | BitNet-2B-4T | Reward learning |
+| CBL | Cerebellum | Cerebellum | LOOP | TRIT-TRT | BitNet-2B-4T | Timing & error correction |
+| OUT | Output Action | Output | OUTPUT | — | none | Final delivery |
+
+All LLM-powered agents use TRIT-TRT with automatic Ollama fallback if TRIT-TRT is unavailable.
 
 ---
 
@@ -280,8 +311,9 @@ Implement VTA reward-based learning across workflow executions.
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
-| `ollama` | ollama/ollama | 127.0.0.1:11434 | Local LLM inference |
-| `model_bootstrap` | ollama/ollama | — | Pull models on first run |
+| **`trit_trt`** | **config/Dockerfile.trit-trt** | **127.0.0.1:8765** | **Primary ternary inference (BitNet + TRT)** |
+| `ollama` | ollama/ollama | 127.0.0.1:11434 | Fallback LLM inference |
+| `model_bootstrap` | ollama/ollama | — | Pull fallback models on first run |
 | `openclaw` | ghcr.io/openclaw/openclaw | 127.0.0.1:18789 | Agent runtime gateway |
 | `canvas` | node:22-alpine | 127.0.0.1:3000 | NEURAL-CLAW UI |
 | `hippocampus` | chromadb/chroma | 127.0.0.1:8000 | Vector memory store |
@@ -293,15 +325,24 @@ All ports bound to loopback only. Access via Tailscale VPN.
 
 ## Models Required
 
+### Primary: TRIT-TRT (BitNet Ternary)
+
+| Model | Size | Parameters | Agent Usage | Setup |
+|-------|------|-----------|-------------|-------|
+| **BitNet-b1.58-2B-4T** | ~500MB | 2B (ternary) | All brain-region agents | `cd trit-trt && ./scripts/setup_model.sh` |
+
+BitNet models use 1.58-bit ternary weights ({-1, 0, +1}), giving 10x compression vs FP16.
+The 2B model runs comfortably on 4GB VRAM or CPU-only with 2-7 tok/s.
+
+### Fallback: Ollama (standard inference)
+
 | Model | Size | Agent Usage | Pull Command |
 |-------|------|-------------|--------------|
-| llama3.2:3b | ~2GB | PFC, MOTOR, BROCA, WERNICKE, STRIATUM | `ollama pull llama3.2:3b` |
-| phi4-mini | ~1.5GB | THL, LC, SENSORY, HIPPO, AMYGDALA, ACC, VTA, CBL | `ollama pull phi4-mini` |
+| llama3.2:3b | ~2GB | Fallback for all agents | `ollama pull llama3.2:3b` |
 | nomic-embed-text | ~274MB | Hippocampus embeddings | `ollama pull nomic-embed-text` |
-| qwen2.5-coder:7b | ~4.7GB | (optional) Code-focused agents | `ollama pull qwen2.5-coder:7b` |
 
-Minimum RAM: 8GB (llama3.2:3b + phi4-mini loaded concurrently)
-Recommended: 16GB+ for comfortable multi-agent operation
+Minimum RAM: 4GB (BitNet-2B ternary, primary mode)
+Recommended: 8GB+ (BitNet + Ollama fallback loaded concurrently)
 
 ---
 
@@ -333,10 +374,12 @@ Recommended: 16GB+ for comfortable multi-agent operation
 
 | Interface | Protocol | Purpose |
 |-----------|----------|---------|
+| **TRIT-TRT** | **WebSocket `ws://127.0.0.1:8765/ws`** | **Primary ternary inference + TRT reasoning** |
+| **TRIT-TRT Health** | **REST `http://127.0.0.1:8765/health`** | **Backend status check** |
 | OpenClaw Gateway | WebSocket `ws://127.0.0.1:18789` | Agent chat, tools, sessions |
+| Ollama API | REST `http://127.0.0.1:11434` | Fallback model inference |
+| ChromaDB | REST `http://127.0.0.1:8000` | Vector memory operations |
 | NemoClaw Policy Proxy | REST `/api/policy` | Security policy read/write |
 | OpenShell Gateway | REST | Sandbox lifecycle management |
 | NIM Endpoints | OpenAI-compatible REST | NVIDIA model inference |
-| Ollama API | REST `http://127.0.0.1:11434` | Local model inference |
-| ChromaDB | REST `http://127.0.0.1:8000` | Vector memory operations |
 | MCP/A2A | Protocol-specific | External agent communication |

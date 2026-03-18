@@ -2,6 +2,7 @@ import { M } from "../theme/mizu.js";
 
 export default function TopBar({
   ollama,
+  tritTrt,
   nodeCount,
   connectionCount,
   workflowInput,
@@ -44,7 +45,31 @@ export default function TopBar({
 
       <div style={{ width: 1, height: 20, background: M.border }} />
 
-      {/* Ollama status */}
+      {/* TRIT-TRT status (primary) */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <div
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background:
+              tritTrt?.ok === true
+                ? M.neural
+                : tritTrt?.ok === false
+                  ? M.error
+                  : M.synthesis,
+          }}
+        />
+        <span style={{ fontSize: 9, color: M.textDim }}>
+          {tritTrt?.ok === true
+            ? `TRIT-TRT · BitNet${tritTrt.busy ? " (busy)" : ""}`
+            : tritTrt?.ok === false
+              ? "TRT offline"
+              : "Checking…"}
+        </span>
+      </div>
+
+      {/* Ollama status (fallback) */}
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
         <div
           style={{
@@ -55,16 +80,16 @@ export default function TopBar({
               ollama.ok === true
                 ? M.success
                 : ollama.ok === false
-                  ? M.error
+                  ? M.dim
                   : M.synthesis,
           }}
         />
         <span style={{ fontSize: 9, color: M.textDim }}>
           {ollama.ok === true
-            ? `Ollama · ${ollama.models.length} models`
+            ? `Ollama · ${ollama.models.length} fallback`
             : ollama.ok === false
               ? "Ollama offline"
-              : "Checking…"}
+              : "…"}
         </span>
       </div>
 

@@ -9,6 +9,7 @@ export const initialState = {
   running: false,
   log: [],
   ollama: { ok: null, models: [] },
+  tritTrt: { ok: null, busy: false },
 };
 
 // ── Reducer ──────────────────────────────────────────────────────────
@@ -101,6 +102,8 @@ export function reducer(s, a) {
       return { ...s, running: a.val };
     case "SET_OLLAMA":
       return { ...s, ollama: a.status };
+    case "SET_TRIT_TRT":
+      return { ...s, tritTrt: a.status };
     default:
       return s;
   }

@@ -3,6 +3,7 @@ import { M } from "./theme/mizu.js";
 import { uid } from "./utils/helpers.js";
 import { AGENTS } from "./constants/agents.js";
 import { pingOllama } from "./api/ollama.js";
+import { pingTritTRT } from "./api/trit-trt.js";
 import { reducer, initialState } from "./state/reducer.js";
 import { runWorkflow } from "./engine/workflow.js";
 import TopBar from "./components/TopBar.jsx";
@@ -20,17 +21,25 @@ export default function NeuralClaw() {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [tab, setTab] = useState("inspector");
   const [ollamaEndpoint, setOllamaEndpoint] = useState("http://localhost:11434");
+  const [tritTrtEndpoint, setTritTrtEndpoint] = useState("http://localhost:8765");
   const [defaultModel, setDefaultModel] = useState("llama3.2");
+  const [trtRounds, setTrtRounds] = useState(3);
+  const [trtCandidates, setTrtCandidates] = useState(8);
   const [workflowInput, setWorkflowInput] = useState("");
   const ollamaRef = useRef(ollamaEndpoint);
   const modelRef = useRef(defaultModel);
+  const tritTrtRef = useRef(tritTrtEndpoint);
   useEffect(() => { ollamaRef.current = ollamaEndpoint; }, [ollamaEndpoint]);
   useEffect(() => { modelRef.current = defaultModel; }, [defaultModel]);
+  useEffect(() => { tritTrtRef.current = tritTrtEndpoint; }, [tritTrtEndpoint]);
 
-  // Ping Ollama on mount
+  // Ping backends on mount
   useEffect(() => {
     pingOllama(ollamaEndpoint).then((s) =>
       dispatch({ type: "SET_OLLAMA", status: s })
+    );
+    pingTritTRT(tritTrtEndpoint).then((s) =>
+      dispatch({ type: "SET_TRIT_TRT", status: s })
     );
   }, []);
 
@@ -130,6 +139,9 @@ export default function NeuralClaw() {
       workflowInput,
       ollamaEndpoint: ollamaRef.current,
       defaultModel: modelRef.current,
+      tritTrtEndpoint: tritTrtRef.current,
+      trtRounds,
+      trtCandidates,
       dispatch,
       log,
     });
@@ -159,6 +171,7 @@ export default function NeuralClaw() {
     >
       <TopBar
         ollama={state.ollama}
+        tritTrt={state.tritTrt}
         nodeCount={Object.keys(state.nodes).length}
         connectionCount={state.connections.length}
         workflowInput={workflowInput}
@@ -279,6 +292,13 @@ export default function NeuralClaw() {
           defaultModel={defaultModel}
           setDefaultModel={setDefaultModel}
           ollama={state.ollama}
+          tritTrtEndpoint={tritTrtEndpoint}
+          setTritTrtEndpoint={setTritTrtEndpoint}
+          tritTrt={state.tritTrt}
+          trtRounds={trtRounds}
+          setTrtRounds={setTrtRounds}
+          trtCandidates={trtCandidates}
+          setTrtCandidates={setTrtCandidates}
         />
       </div>
 

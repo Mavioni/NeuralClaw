@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════════════
 # NEURAL-CLAW — Local Agent Orchestration Stack
-# MIZU Dialectical Architecture | Ollama Local Inference | No API Keys
+# MIZU Dialectical Architecture | TRIT-TRT + Ollama Local Inference
 # ═══════════════════════════════════════════════════════════════════════
 # 
 # DEPLOYMENT REQUIREMENTS:
@@ -23,7 +23,8 @@ networks:
     driver: bridge          # Only gateway container touches this
 
 volumes:
-  ollama_models:            # Persisted model weights
+  ollama_models:            # Persisted model weights (Ollama fallback)
+  trit_trt_models:          # TRIT-TRT BitNet ternary model weights
   openclaw_data:            # OpenClaw state & workspace
   hippo_memory:             # Hippocampus agent long-term memory
   corax_audit:              # Governance audit log (append-only)
@@ -84,6 +85,37 @@ services:
     environment:
       - OLLAMA_HOST=neural_ollama:11434
 
+  # ─── TRIT-TRT: Ternary Dialectical Inference Engine (PRIMARY) ─────────
+  # BitNet b1.58 ternary quantization + TRT self-improving reasoning loop
+  # Replaces Ollama as the primary inference backend for brain-region agents
+  trit_trt:
+    build:
+      context: ./trit-trt
+      dockerfile: ../config/Dockerfile.trit-trt
+    container_name: neural_trit_trt
+    restart: unless-stopped
+    networks:
+      - neural_internal
+    volumes:
+      - trit_trt_models:/root/.yunisa/models
+      - ./trit-trt:/app:ro
+    environment:
+      - TRIT_TRT_HOST=0.0.0.0
+      - TRIT_TRT_PORT=8765
+    ports:
+      - "127.0.0.1:8765:8765"       # Loopback only
+    deploy:
+      resources:
+        limits:
+          memory: 8G                 # BitNet is memory-efficient (~2GB for 2B model)
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8765/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    security_opt:
+      - no-new-privileges:true
+
   # ─── OpenClaw Gateway ─────────────────────────────────────────────────
   openclaw:
     image: ghcr.io/openclaw/openclaw:latest
@@ -127,6 +159,7 @@ services:
     container_name: neural_canvas
     restart: unless-stopped
     depends_on:
+      - trit_trt
       - ollama
       - openclaw
     networks:
