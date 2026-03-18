@@ -28,6 +28,7 @@ volumes:
   openclaw_data:            # OpenClaw state & workspace
   hippo_memory:             # Hippocampus agent long-term memory
   corax_audit:              # Governance audit log (append-only)
+  chat_sessions:            # Chat mode session & knowledge persistence
 
 services:
 

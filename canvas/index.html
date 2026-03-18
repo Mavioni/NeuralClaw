@@ -7,6 +7,12 @@
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { background: #0A0E17; overflow: hidden; }
+      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+      ::-webkit-scrollbar { width: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: #1E2845; border-radius: 2px; }
+      ::-webkit-scrollbar-thumb:hover { background: #2A3050; }
+      textarea::-webkit-scrollbar { width: 3px; }
     </style>
   </head>
   <body>

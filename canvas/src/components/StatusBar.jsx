@@ -1,6 +1,6 @@
 import { M } from "../theme/mizu.js";
 
-export default function StatusBar({ running, doneCount, totalCount }) {
+export default function StatusBar({ running, doneCount, totalCount, mode }) {
   return (
     <div
       style={{
@@ -24,7 +24,7 @@ export default function StatusBar({ running, doneCount, totalCount }) {
         {running ? "◉ EXECUTING" : "● IDLE"}
       </span>
       <span style={{ fontSize: 8, color: M.textDim, fontFamily: "monospace" }}>
-        {doneCount}/{totalCount} nodes complete
+        {mode === "chat" ? "chat mode" : `${doneCount}/${totalCount} nodes complete`}
       </span>
       <div style={{ flex: 1 }} />
       <span style={{ fontSize: 8, color: M.thesis, fontFamily: "monospace" }}>

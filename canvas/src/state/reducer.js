@@ -2,14 +2,19 @@ import { uid } from "../utils/helpers.js";
 
 // ── Initial State ────────────────────────────────────────────────────
 export const initialState = {
+  // Canvas state
   nodes: {},
   connections: [],
   selected: null,
   connecting: null,
   running: false,
   log: [],
+  // Backend state
   ollama: { ok: null, models: [] },
   tritTrt: { ok: null, busy: false },
+  openClaw: { ok: null, version: null },
+  // UI mode
+  mode: "canvas", // "canvas" | "chat"
 };
 
 // ── Reducer ──────────────────────────────────────────────────────────
@@ -104,6 +109,10 @@ export function reducer(s, a) {
       return { ...s, ollama: a.status };
     case "SET_TRIT_TRT":
       return { ...s, tritTrt: a.status };
+    case "SET_OPENCLAW":
+      return { ...s, openClaw: a.status };
+    case "SET_MODE":
+      return { ...s, mode: a.mode };
     default:
       return s;
   }

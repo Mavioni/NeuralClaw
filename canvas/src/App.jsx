@@ -4,6 +4,7 @@ import { uid } from "./utils/helpers.js";
 import { AGENTS } from "./constants/agents.js";
 import { pingOllama } from "./api/ollama.js";
 import { pingTritTRT } from "./api/trit-trt.js";
+import { pingOpenClaw } from "./api/openclaw.js";
 import { reducer, initialState } from "./state/reducer.js";
 import { runWorkflow } from "./engine/workflow.js";
 import TopBar from "./components/TopBar.jsx";
@@ -12,6 +13,7 @@ import InspectorPanel from "./components/InspectorPanel.jsx";
 import StatusBar from "./components/StatusBar.jsx";
 import CNode from "./components/nodes/CNode.jsx";
 import Conn from "./components/connections/Conn.jsx";
+import ChatMode from "./components/chat/ChatMode.jsx";
 
 export default function NeuralClaw() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -25,6 +27,8 @@ export default function NeuralClaw() {
   const [defaultModel, setDefaultModel] = useState("llama3.2");
   const [trtRounds, setTrtRounds] = useState(3);
   const [trtCandidates, setTrtCandidates] = useState(8);
+  const [openClawEndpoint, setOpenClawEndpoint] = useState("http://localhost:18789");
+  const [openClawToken, setOpenClawToken] = useState("");
   const [workflowInput, setWorkflowInput] = useState("");
   const ollamaRef = useRef(ollamaEndpoint);
   const modelRef = useRef(defaultModel);
@@ -40,6 +44,9 @@ export default function NeuralClaw() {
     );
     pingTritTRT(tritTrtEndpoint).then((s) =>
       dispatch({ type: "SET_TRIT_TRT", status: s })
+    );
+    pingOpenClaw(openClawEndpoint, openClawToken || null).then((s) =>
+      dispatch({ type: "SET_OPENCLAW", status: s })
     );
   }, []);
 
@@ -172,6 +179,7 @@ export default function NeuralClaw() {
       <TopBar
         ollama={state.ollama}
         tritTrt={state.tritTrt}
+        openClaw={state.openClaw}
         nodeCount={Object.keys(state.nodes).length}
         connectionCount={state.connections.length}
         workflowInput={workflowInput}
@@ -179,133 +187,153 @@ export default function NeuralClaw() {
         running={state.running}
         onRun={handleRun}
         onReset={resetAll}
+        mode={state.mode}
+        onSetMode={(m) => dispatch({ type: "SET_MODE", mode: m })}
       />
 
       {/* MAIN LAYOUT */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <NodePalette onDragStart={dragStart} />
+      {state.mode === "chat" ? (
+        <ChatMode
+          config={{
+            ollamaEndpoint,
+            defaultModel,
+            tritTrtEndpoint,
+            trtRounds,
+            trtCandidates,
+            openClawEndpoint,
+            openClawToken,
+            ollama: state.ollama,
+            tritTrt: state.tritTrt,
+            openClaw: state.openClaw,
+          }}
+        />
+      ) : (
+        <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+          <NodePalette onDragStart={dragStart} />
 
-        {/* CENTER: Canvas */}
-        <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-          <div
-            ref={canvasRef}
-            style={{
-              width: "100%",
-              height: "100%",
-              position: "relative",
-              overflow: "hidden",
-              backgroundImage: `radial-gradient(circle, ${M.border}55 1px, transparent 1px)`,
-              backgroundSize: "24px 24px",
-              cursor: state.connecting ? "crosshair" : "default",
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={drop}
-            onClick={canvasClick}
-          >
-            {/* SVG layer */}
-            <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }}>
-              {state.connections.map((c) => (
-                <Conn
-                  key={c.id}
-                  c={c}
-                  nodes={state.nodes}
-                  onDel={(id) => dispatch({ type: "DELETE_CONN", id })}
+          {/* CENTER: Canvas */}
+          <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+            <div
+              ref={canvasRef}
+              style={{
+                width: "100%",
+                height: "100%",
+                position: "relative",
+                overflow: "hidden",
+                backgroundImage: `radial-gradient(circle, ${M.border}55 1px, transparent 1px)`,
+                backgroundSize: "24px 24px",
+                cursor: state.connecting ? "crosshair" : "default",
+              }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={drop}
+              onClick={canvasClick}
+            >
+              {/* SVG layer */}
+              <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", zIndex: 0 }}>
+                {state.connections.map((c) => (
+                  <Conn
+                    key={c.id}
+                    c={c}
+                    nodes={state.nodes}
+                    onDel={(id) => dispatch({ type: "DELETE_CONN", id })}
+                  />
+                ))}
+                {/* Live connection preview */}
+                {state.connecting &&
+                  (() => {
+                    const fn = state.nodes[state.connecting.nodeId];
+                    if (!fn) return null;
+                    const x1 = fn.x + 195,
+                      y1 = fn.y + 50,
+                      x2 = mouse.x,
+                      y2 = mouse.y,
+                      cx = (x1 + x2) / 2;
+                    return (
+                      <path
+                        d={`M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`}
+                        fill="none"
+                        stroke={M.neural}
+                        strokeWidth={1.5}
+                        strokeDasharray="6,3"
+                        opacity={0.5}
+                        style={{ pointerEvents: "none" }}
+                      />
+                    );
+                  })()}
+              </svg>
+
+              {/* Nodes */}
+              {Object.values(state.nodes).map((node) => (
+                <CNode
+                  key={node.id}
+                  node={node}
+                  selected={state.selected === node.id}
+                  onDown={(e) => nodeDown(e, node.id)}
+                  onPortClick={portClick}
                 />
               ))}
-              {/* Live connection preview */}
-              {state.connecting &&
-                (() => {
-                  const fn = state.nodes[state.connecting.nodeId];
-                  if (!fn) return null;
-                  const x1 = fn.x + 195,
-                    y1 = fn.y + 50,
-                    x2 = mouse.x,
-                    y2 = mouse.y,
-                    cx = (x1 + x2) / 2;
-                  return (
-                    <path
-                      d={`M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`}
-                      fill="none"
-                      stroke={M.neural}
-                      strokeWidth={1.5}
-                      strokeDasharray="6,3"
-                      opacity={0.5}
-                      style={{ pointerEvents: "none" }}
-                    />
-                  );
-                })()}
-            </svg>
 
-            {/* Nodes */}
-            {Object.values(state.nodes).map((node) => (
-              <CNode
-                key={node.id}
-                node={node}
-                selected={state.selected === node.id}
-                onDown={(e) => nodeDown(e, node.id)}
-                onPortClick={portClick}
-              />
-            ))}
-
-            {/* Empty state */}
-            {Object.keys(state.nodes).length === 0 && (
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  pointerEvents: "none",
-                }}
-              >
-                <div style={{ fontSize: 40, opacity: 0.08, marginBottom: 14 }}>◈</div>
-                <div style={{ fontSize: 11, color: M.textDim, opacity: 0.4 }}>
-                  Drag brain region agents from the palette to build your neural workflow
-                </div>
+              {/* Empty state */}
+              {Object.keys(state.nodes).length === 0 && (
                 <div
                   style={{
-                    fontSize: 9,
-                    color: M.textDim,
-                    opacity: 0.25,
-                    marginTop: 8,
-                    letterSpacing: 1,
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    pointerEvents: "none",
                   }}
                 >
-                  SUGGESTED: RAS → THL → PFC → BROCA → OUT
+                  <div style={{ fontSize: 40, opacity: 0.08, marginBottom: 14 }}>◈</div>
+                  <div style={{ fontSize: 11, color: M.textDim, opacity: 0.4 }}>
+                    Drag brain region agents from the palette to build your neural workflow
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 9,
+                      color: M.textDim,
+                      opacity: 0.25,
+                      marginTop: 8,
+                      letterSpacing: 1,
+                    }}
+                  >
+                    SUGGESTED: RAS → THL → PFC → BROCA → OUT
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
-        <InspectorPanel
-          tab={tab}
-          setTab={setTab}
-          sel={sel}
-          dispatch={dispatch}
-          log={state.log}
-          logRef={logRef}
-          ollamaEndpoint={ollamaEndpoint}
-          setOllamaEndpoint={setOllamaEndpoint}
-          defaultModel={defaultModel}
-          setDefaultModel={setDefaultModel}
-          ollama={state.ollama}
-          tritTrtEndpoint={tritTrtEndpoint}
-          setTritTrtEndpoint={setTritTrtEndpoint}
-          tritTrt={state.tritTrt}
-          trtRounds={trtRounds}
-          setTrtRounds={setTrtRounds}
-          trtCandidates={trtCandidates}
-          setTrtCandidates={setTrtCandidates}
-        />
-      </div>
+          <InspectorPanel
+            tab={tab}
+            setTab={setTab}
+            sel={sel}
+            dispatch={dispatch}
+            log={state.log}
+            logRef={logRef}
+            ollamaEndpoint={ollamaEndpoint}
+            setOllamaEndpoint={setOllamaEndpoint}
+            defaultModel={defaultModel}
+            setDefaultModel={setDefaultModel}
+            ollama={state.ollama}
+            tritTrtEndpoint={tritTrtEndpoint}
+            setTritTrtEndpoint={setTritTrtEndpoint}
+            tritTrt={state.tritTrt}
+            trtRounds={trtRounds}
+            setTrtRounds={setTrtRounds}
+            trtCandidates={trtCandidates}
+            setTrtCandidates={setTrtCandidates}
+          />
+        </div>
+      )}
 
       <StatusBar
         running={state.running}
         doneCount={Object.values(state.nodes).filter((n) => n.status === "done").length}
         totalCount={Object.keys(state.nodes).length}
+        mode={state.mode}
       />
     </div>
   );
