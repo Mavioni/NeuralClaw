@@ -43,10 +43,10 @@ export default function NeuralClaw() {
     );
   }, []);
 
-  // Auto-scroll log
+  // Auto-scroll log only when log tab is active
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = 9999;
-  }, [state.log]);
+    if (tab === "log" && logRef.current) logRef.current.scrollTop = 9999;
+  }, [state.log, tab]);
 
   const log = (node, msg, kind = "info") =>
     dispatch({ type: "LOG", entry: { node: node || "SYS", msg, kind } });
