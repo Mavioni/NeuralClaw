@@ -15,6 +15,13 @@ export default function InspectorPanel({
   defaultModel,
   setDefaultModel,
   ollama,
+  tritTrtEndpoint,
+  setTritTrtEndpoint,
+  tritTrt,
+  trtRounds,
+  setTrtRounds,
+  trtCandidates,
+  setTrtCandidates,
 }) {
   return (
     <div
@@ -64,6 +71,13 @@ export default function InspectorPanel({
             defaultModel={defaultModel}
             setDefaultModel={setDefaultModel}
             ollama={ollama}
+            tritTrtEndpoint={tritTrtEndpoint}
+            setTritTrtEndpoint={setTritTrtEndpoint}
+            tritTrt={tritTrt}
+            trtRounds={trtRounds}
+            setTrtRounds={setTrtRounds}
+            trtCandidates={trtCandidates}
+            setTrtCandidates={setTrtCandidates}
             dispatch={dispatch}
           />
         )}

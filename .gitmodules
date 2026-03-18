@@ -1,0 +1,3 @@
+[submodule "trit-trt"]
+	path = trit-trt
+	url = https://github.com/Mavioni/trit-trt.git

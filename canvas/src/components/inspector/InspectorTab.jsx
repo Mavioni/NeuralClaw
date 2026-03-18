@@ -26,7 +26,8 @@ export default function InspectorTab({ sel, dispatch }) {
       <div style={{ fontSize: 8, color: M.textDim, marginBottom: 8, lineHeight: 1.7 }}>{selDef.bio}</div>
 
       <Row label="TYPE">{selDef.nodeType}</Row>
-      <Row label="MODEL">{selDef.model || "passthrough"}</Row>
+      <Row label="BACKEND">{selDef.backend || "passthrough"}</Row>
+      <Row label="MODEL">{selDef.model || "none"}</Row>
       <Row label="TIER">{selDef.tier}</Row>
 
       {/* Trit Vector */}

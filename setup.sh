@@ -177,9 +177,20 @@ log "Enabling unattended security upgrades..."
 apt-get install -y -qq unattended-upgrades
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
-# ─── 10. Start NEURAL-CLAW Stack ────────────────────────────────────
-log "Starting NEURAL-CLAW Docker stack..."
+# ─── 10. Setup TRIT-TRT (Ternary Inference) ──────────────────────────
+log "Setting up TRIT-TRT ternary inference engine..."
 cd "$(dirname "$0")"
+if [ -d "./trit-trt" ]; then
+  log "  TRIT-TRT submodule found."
+  git submodule update --init --recursive 2>/dev/null || true
+  log "  Building TRIT-TRT Docker image..."
+  docker compose build trit_trt 2>/dev/null || warn "  TRIT-TRT build skipped (will pull on first run)"
+else
+  warn "  trit-trt submodule not found. Run: git submodule update --init"
+fi
+
+# ─── 11. Start NEURAL-CLAW Stack ────────────────────────────────────
+log "Starting NEURAL-CLAW Docker stack..."
 docker compose up -d
 
 # Wait for Ollama
@@ -192,15 +203,16 @@ for i in $(seq 1 30); do
   sleep 2
 done
 
-# ─── 11. Summary ─────────────────────────────────────────────────────
+# ─── 12. Summary ─────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  NEURAL-CLAW — Deployment Complete${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo ""
 echo "  Canvas UI:       http://localhost:3000 (Tailscale only)"
+echo "  TRIT-TRT:        http://localhost:8765 (loopback only — primary inference)"
 echo "  OpenClaw API:    http://localhost:18789 (Tailscale only)"
-echo "  Ollama API:      http://localhost:11434 (loopback only)"
+echo "  Ollama API:      http://localhost:11434 (loopback only — fallback)"
 echo "  SSH port:        2222"
 echo ""
 echo -e "${YELLOW}  NEXT STEPS:${NC}"

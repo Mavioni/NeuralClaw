@@ -1,7 +1,21 @@
 import { M } from "../../theme/mizu.js";
 import { CONN_TYPES } from "../../constants/connections.js";
 import { pingOllama } from "../../api/ollama.js";
+import { pingTritTRT } from "../../api/trit-trt.js";
 import Label from "../shared/Label.jsx";
+
+const inputStyle = {
+  width: "100%",
+  padding: "5px 8px",
+  background: M.ink2,
+  border: `1px solid ${M.border}`,
+  borderRadius: 4,
+  color: M.text,
+  fontSize: 9,
+  fontFamily: "monospace",
+  boxSizing: "border-box",
+  marginBottom: 8,
+};
 
 export default function ConfigTab({
   ollamaEndpoint,
@@ -9,44 +23,128 @@ export default function ConfigTab({
   defaultModel,
   setDefaultModel,
   ollama,
+  tritTrtEndpoint,
+  setTritTrtEndpoint,
+  tritTrt,
+  trtRounds,
+  setTrtRounds,
+  trtCandidates,
+  setTrtCandidates,
   dispatch,
 }) {
   return (
     <div style={{ padding: 12 }}>
-      <Label>OLLAMA ENDPOINT</Label>
+      {/* ── TRIT-TRT (Primary Backend) ──────────────────────── */}
+      <div
+        style={{
+          marginBottom: 12,
+          padding: 8,
+          background: `${M.neural}0A`,
+          border: `1px solid ${M.neural}33`,
+          borderRadius: 4,
+        }}
+      >
+        <div style={{ fontSize: 8, color: M.neural, fontWeight: 700, marginBottom: 6, letterSpacing: 1 }}>
+          TRIT-TRT · PRIMARY BACKEND
+        </div>
+        <div style={{ fontSize: 7, color: M.textDim, marginBottom: 6, lineHeight: 1.6 }}>
+          BitNet b1.58 ternary quantization + TRT dialectical reasoning.
+          Weights: {"{-1, 0, +1}"} — thesis, antithesis, synthesis.
+        </div>
+
+        <Label>TRIT-TRT ENDPOINT</Label>
+        <input
+          value={tritTrtEndpoint}
+          onChange={(e) => setTritTrtEndpoint(e.target.value)}
+          style={inputStyle}
+        />
+
+        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+          <div style={{ flex: 1 }}>
+            <Label>TRT ROUNDS</Label>
+            <input
+              type="number"
+              min={1}
+              max={5}
+              value={trtRounds}
+              onChange={(e) => setTrtRounds(parseInt(e.target.value) || 3)}
+              style={{ ...inputStyle, width: "100%", marginBottom: 0 }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <Label>CANDIDATES</Label>
+            <input
+              type="number"
+              min={2}
+              max={16}
+              value={trtCandidates}
+              onChange={(e) => setTrtCandidates(parseInt(e.target.value) || 8)}
+              style={{ ...inputStyle, width: "100%", marginBottom: 0 }}
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={() =>
+            pingTritTRT(tritTrtEndpoint).then((s) =>
+              dispatch({ type: "SET_TRIT_TRT", status: s })
+            )
+          }
+          style={{
+            width: "100%",
+            padding: 6,
+            background: `${M.neural}18`,
+            border: `1px solid ${M.neural}44`,
+            borderRadius: 4,
+            color: M.neural,
+            cursor: "pointer",
+            fontSize: 9,
+            fontFamily: "monospace",
+            marginBottom: 4,
+          }}
+        >
+          ⟳ TEST TRIT-TRT
+        </button>
+
+        {tritTrt?.ok === false && (
+          <div
+            style={{
+              padding: 6,
+              background: `${M.error}11`,
+              border: `1px solid ${M.error}33`,
+              borderRadius: 4,
+              fontSize: 7,
+              color: M.error,
+              lineHeight: 1.8,
+              marginTop: 4,
+            }}
+          >
+            Cannot reach TRIT-TRT. Agents will fall back to Ollama.
+            <br />
+            Start with: <code>cd trit-trt && python -m uvicorn ui.app:app --port 8765</code>
+          </div>
+        )}
+
+        {tritTrt?.ok === true && (
+          <div style={{ fontSize: 7, color: M.neural, marginTop: 4 }}>
+            Connected · BitNet-b1.58-2B-4T · {trtRounds} rounds × {trtCandidates} candidates
+          </div>
+        )}
+      </div>
+
+      {/* ── Ollama (Fallback Backend) ───────────────────────── */}
+      <Label>OLLAMA ENDPOINT (FALLBACK)</Label>
       <input
         value={ollamaEndpoint}
         onChange={(e) => setOllamaEndpoint(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "5px 8px",
-          background: M.ink2,
-          border: `1px solid ${M.border}`,
-          borderRadius: 4,
-          color: M.text,
-          fontSize: 9,
-          fontFamily: "monospace",
-          boxSizing: "border-box",
-          marginBottom: 8,
-        }}
+        style={inputStyle}
       />
 
-      <Label>DEFAULT ORCHESTRATION MODEL</Label>
+      <Label>DEFAULT FALLBACK MODEL</Label>
       <input
         value={defaultModel}
         onChange={(e) => setDefaultModel(e.target.value)}
-        style={{
-          width: "100%",
-          padding: "5px 8px",
-          background: M.ink2,
-          border: `1px solid ${M.border}`,
-          borderRadius: 4,
-          color: M.text,
-          fontSize: 9,
-          fontFamily: "monospace",
-          boxSizing: "border-box",
-          marginBottom: 8,
-        }}
+        style={inputStyle}
       />
 
       <button
@@ -58,17 +156,17 @@ export default function ConfigTab({
         style={{
           width: "100%",
           padding: 6,
-          background: `${M.neural}18`,
-          border: `1px solid ${M.neural}44`,
+          background: `${M.dim}`,
+          border: `1px solid ${M.border}`,
           borderRadius: 4,
-          color: M.neural,
+          color: M.textDim,
           cursor: "pointer",
           fontSize: 9,
           fontFamily: "monospace",
           marginBottom: 12,
         }}
       >
-        ⟳ TEST CONNECTION
+        ⟳ TEST OLLAMA
       </button>
 
       {ollama.ok === false && (
@@ -84,21 +182,13 @@ export default function ConfigTab({
             marginBottom: 10,
           }}
         >
-          Cannot reach Ollama. Ensure:
-          <br />
-          1. Ollama is running: <code>ollama serve</code>
-          <br />
-          2. OLLAMA_ORIGINS allows this origin
-          <br />
-          3. Port 11434 is accessible
-          <br />
-          4. If using Docker, check CORS env var
+          Ollama offline. No fallback available.
         </div>
       )}
 
       {ollama.models.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <Label>AVAILABLE MODELS (click to set default)</Label>
+          <Label>OLLAMA MODELS (click to set fallback)</Label>
           {ollama.models.map((m) => (
             <div
               key={m}
@@ -142,11 +232,11 @@ export default function ConfigTab({
           SECURITY
         </div>
         <div style={{ fontSize: 8, color: M.textDim, lineHeight: 1.8 }}>
-          Ollama: bind to 127.0.0.1 only
+          TRIT-TRT: bind to 127.0.0.1:8765 only
+          <br />
+          Ollama: bind to 127.0.0.1:11434 only
           <br />
           OpenClaw: access via Tailscale VPN
-          <br />
-          Never expose :11434 or :18789 publicly
           <br />
           CoRax kill switch: always operational
         </div>
