@@ -6,6 +6,16 @@
     "auth": {
       "type": "bearer",
       "envVar": "OPENCLAW_GATEWAY_TOKEN"
+    },
+    "http": {
+      "endpoints": {
+        "chatCompletions": {
+          "enabled": true
+        },
+        "responses": {
+          "enabled": true
+        }
+      }
     }
   },
   "models": {
